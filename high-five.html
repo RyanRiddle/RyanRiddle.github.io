@@ -1,0 +1,49 @@
+<h1>High Five</h1>
+
+<p>My first day at the Recurse Center I paired on a programming problem that goes something like this.  Given two positive integers, count the number of integers between them (inclusive) that do not contain the digit 5.</p>
+
+<p>Here's our first pass.</p>
+
+<script src="https://gist.github.com/RyanRiddle/fd89f68ce5f32e3566302b8fd6a90f95.js"></script>
+
+<p>This code loops over every number in the range and determines whether the current number contains the digit 5.  naive(0, 10) returns 1.  naive(5, 15) returns 2.  And naive(0, 100) returns 19.  Good!</p>
+
+<p>I got impatient when I ran naive(0, 1000000000) and ctrl+c'd my way out of there.</p>
+
+<p>We can make this faster if we compute the number of integers containing 5's beneath a power of 10.  There are exactly 0 integers containing 5 between 0 and 10^0 = 1.  There is 1 integer containing 5 (5) between 0 and 10^1 = 10.  And there are 19 integers containing 5 between 0 and 0 and 10^2 = 100.</p>
+
+<p>We can compute the number of integers containing 5 between 0 and any power of 10 like this where x is a power of 10 (excuse the sloppy code).</p>
+
+<script src="https://gist.github.com/RyanRiddle/e39f51172736205c25b1ea144dde25df.js"></script>
+
+<p>How do we use this function to compute the number of integers containing five for a range like [0, 1234]?</p>
+
+<p>Let's start with the fact that every integer is the sum of powers of 10 times a coefficient.  For example 1234 = 1*10^3 + 2*10^2 + 3*10^1 + 4*10^0.</p>
+
+<p>If we decompose the number 1234 into [1000, 200, 30, 4], we can compute the number of 5's beneath each power of 10 and multiply the results by each digit in 1234 like this 1*n5sbeneath(1000) + 2*n5sbeneath(100) + 3*n5sbeneath(10) + 4*n5sbeneath(1) = 1*271 + 2*19 + 3*1 + 4*0 = 291.</p>
+
+<p>Well, almost.  You might have noticed that if we were trying to compute the number of integers containing 5 beneath 1235, we would have computed 1*271 + 2*19 + 3*1 + 5*0 = 291 which is not correct because we have not counted 1235.</p>
+
+<p>We can fix this with some special handling.  Essentially we will treat a number differently if its most significant digit is 5 or greater.  See this function I cobbled together.</p>
+
+<script src="https://gist.github.com/RyanRiddle/22d227f51223465b16c161f0c92313d3.js"></script>
+
+<p>Now we can compute the number of integers containing the digit 5 between 0 and (almost) any positive integer.  If we compute n5supto() for the last integer in the range and n5supto() for the first integer in the range, we can take the difference to get the number of integers containing 5 between the two.  If we take the complement of that number, we have computed the number of integers in the range that do not contain the digit 5.</p>
+
+<p>All together now!</p>
+
+<script src="https://gist.github.com/RyanRiddle/99d645250eefe02bccf8bffcd3ec1e2a.js"></script>
+
+<p>faster() allows us to quickly compute the count for ranges like 0 to a googol.  faster(0, 10**100) returns 265613988875874769338781322035779626829233452653394495974574961739092490901302182994384699044002 :)</p>
+
+<p>So how fast is this anyway?  Well n5supto is kind of our workhorse.  And it uses the building blocks n5sbeneath(), msd(), ndigs(), and decompose() which all have O(log n) time-complexity.  n5sbeneath() also uses O(log n) stack space.</p>
+
+<p>n5supto() computes n5sbeneath() for each of the numbers returned by decompose() and decompose() returns O(log n) numbers, so the time-complexity of n5supto() is O((log n)^2) and the space-complexity is O(log n).  The time complexity is pretty good.  Computing n5supto(10**100) takes a multiple of 10,000 operations.</p>
+
+<p>I started geeking out on how big of numbers I could feed to n5supto().  It tops out at 10**995.  Once you hit 10**996, you run out of stack space.  But we can fix that!  Any recursive function can be implemented iteratively.  This iterative implementation takes O(1) stack space.</p>
+
+<script src="https://gist.github.com/RyanRiddle/017e7671276047a40343eafa8f0deefd.js"></script>
+
+<p>Now I can compute n5supto(1**1000).  I start to get impatient again when I try to compute n5supto() for a <a href="https://en.wikipedia.org/wiki/Googolplex">googolplex</a>.</p>
+
+
