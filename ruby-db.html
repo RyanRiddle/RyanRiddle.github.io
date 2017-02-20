@@ -1,0 +1,38 @@
+<title>Ruby DB</title>
+
+<h1>Writing a database in Ruby</h1>
+
+<p>I decided to write a database!  I have been using databases for years but how they work is still mostly a mystery to me.  For instance, how do database systems do ACID?</p>
+
+<p>Today I am writing about how to answer queries.  Familiarity with SQL, Ruby, and functional programming is assumed.</p>
+
+<h2>Using Ruby's Lazy Enumerators to Answer Queries</h2>
+
+<p>A lot of the time you want your database to store a lot of data and respond to queries quickly.  For example you might want to get the first ten books in your database that Ryan owns.</p>
+
+<p>You do not necessarily want your database to read every one of millions of rows to do this.  You just want it to read rows until it finds ten that have the value "Ryan" in the owner field.  The challenge is to do this in a modular, composable way.</p>
+
+<p>Ruby's <a href="https://ruby-doc.org/core-2.3.0/Enumerator.html">Enumerator</a> is very helpful.  Enumerators are often called generators in other languages.  You can read more about them <a href="https://en.wikipedia.org/wiki/Generator_%28computer_programming%29">here</a>.</p>
+
+<p>This code defines a class Query that uses Enumerators to help us answer queries.</p>
+
+<script src="https://gist.github.com/RyanRiddle/acebb47533fd64a1f0263e0351312b75.js"></script>
+
+<p>initialize() creates a new Enumerator.  The first time the enumerator is called, it opens a file, reads a record from the file, and returns the record.  The next time the enumerator is called, it reads the next record from the file and returns that record.  It continues to return the next record until it has run out of records to read.</p>
+
+<p>where() updates the enumerator so it only yields records that meet certain criteria.  It works by calling select on the enumerator object. select is sometimes called filter in other languages (such as javascript).  This select is different though.  This select belongs to the <a href="https://ruby-doc.org/core-2.3.0/Enumerator/Lazy.html">Lazy Enumerator</a> class.  Calling Enumerator::Lazy#select returns a new Lazy Enumerator that only yields records that meet certain criteria.  This is good because we still only need to have one record in memory at a time instead of reading them all into memory at once.</p>
+
+<p>select() updates the enumerator so it yields only certain attributes of each record.  It is similar to where() except it uses Enumerator::Lazy#map.</p>
+
+<p>And finally top() takes the first num records from our enumerator and returns them.</p>
+
+<p>Using this Query class we could translate a SQL query like this
+  <pre><code>
+      SELECT TOP 5 title
+      FROM book
+      WHERE owner = 'Ryan'
+  </code></pre>
+  into this code
+  <code>Query.new("book.db").where({:owner=>"Ryan"}).select(:name).top(5)</code>
+
+
