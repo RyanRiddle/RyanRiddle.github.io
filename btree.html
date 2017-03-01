@@ -1,0 +1,23 @@
+<title>Implementing a B-Tree</title>
+
+<h1>Implementing a B-Tree</h1>
+
+<p>I am <a href="ruby-db.html">writing a database</a>.  At the moment the database can take more than 5 seconds to respond to a query on a table with one million rows.</p>
+
+<p>Each table is stored in its own file and rows are stored in the file one after the next.  There is no indexing.  If we want to find a particular record in the table we may have to look at every record in the file before we find it.</p>
+
+<p>Search time increases linearly with the number of rows.  In a table with 100,000 rows, a query might take 0.5 seconds to complete.  In a table with 1,000,000 rows, maybe 5,000 seconds!</p>
+
+<p>One of the things I can do to make searching the database faster is add a <a href="https://en.wikipedia.org/wiki/Database_index#Non-clustered">non-clustered index</a>.  I can use a <a href="https://en.wikipedia.org/wiki/B-tree">B-Tree</a> to index the table<sup><a href="#footnote-1">1</a></sup>.
+
+<p>I decided to write my own B-Tree in an effort to understand them better.  Over the past three days, I have written over <a href="https://github.com/RyanRiddle/rudb/tree/master/lib/index">400 lines of code</a> for my B-Tree and I am not sure it is correct.</p>
+
+<p>A conversation with another recurser made me realize searching a B-Tree is a lot like searching a <a href="https://en.wikipedia.org/wiki/Skip_list">skip list</a>.  I got to wondering whether indexing the tables with a skip list might be easier.  Evidently, I am <a href="https://en.wikipedia.org/wiki/Skip_list#Usages">not the first</a> to have that thought.</p>
+
+<p>According to William Pugh, the inventor of skip lists,<blockquote>Skip lists are a probabilistic data structure that seem likely to supplant balanced trees as the implementation method of choice for many applications. Skip list algorithms have the same asymptotic expected time bounds as balanced trees and are simpler, faster and use less space.</blockquote></p>
+
+<h2>Footnotes</h2>
+
+<p id="footnote-1">There is a good description of B-Trees in Donald Knuth's The Art of Computer Programming</p>
+
+
