@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+<channel>
+ <title>Ryan's Blog</title>
+ <link>https://ryanriddle.github.io/rss.xml</link>
+
+ <item>
+   <title>Implementing a B-Tree</title>
+   <link>https://ryanriddle.github.io/btree.html</link>
+ </item>
+ <item>
+   <title>Ruby DB</title>
+   <link>https://ryanriddle.github.io/ruby-db.html</link>
+ </item>
+ <item>
+   <title>High Five!</title>
+   <link>https://ryanriddle.github.io/high-five.html</link>
+ </item>
+
+</channel>
+</rss>
