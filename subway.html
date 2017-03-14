@@ -1,0 +1,171 @@
+<title>The Subway</title>
+
+<style>
+  #map {
+  height: 400px;
+  width: 100%;
+  }
+
+  figcaption {
+  margin-top: 1em;
+  font-size: 0.8em;
+  }
+</style>
+
+<h1>The Subway</h1>
+
+<figure>
+  <div id="map"></div>
+  <figcaption>A path through the New York City subway.</figcaption>
+</figure>
+    <script id="data" type="text/javascript" src="coords.json"></script>
+    <script>
+      function initMap() {
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 10,
+          center: {lat: 40.755477, lng: -73.987691}
+
+        });
+
+        var i = 0;
+        var lines = [];
+        var id = window.setInterval(function() {
+            var subpath = [coords[i], coords[i+1]];
+
+            var subwayPath = new google.maps.Polyline({
+              path: subpath,
+              geodesic: true,
+              strokeColor: '#FF0000',
+              strokeOpacity: 1.0,
+              strokeWeight: 2
+            });
+
+            subwayPath.setMap(map);
+            lines.push(subwayPath);
+
+            i += 1;
+            if (i == coords.length - 1) {
+                i = 0;
+                lines.forEach(function(line) {
+                    line.setMap(null);
+                });
+                lines = [];
+            }
+        }, 50);
+      }
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDSqr3kXHSuLPu4wGmJpuDvlEA9j1bMZXA&callback=initMap">
+    </script>
+
+<p>New York City has almost 500 subway stations.  There is a Guinness World Record for <a href="http://www.guinnessworldrecords.com/world-records/416673-fastest-time-to-travel-to-all-new-york-city-subway-stations">the fastest time to visit each station</a>.</p>
+
+<p>It seems like the fastest path to visit all stations can be found using a graph traversal algorithm.  Maybe something like an algorithm for the travelling salesman problem.  This post is about my attempt to use graph theory to find a fast path through the subway.</p>
+
+<p>In order to come up with a solution using graph theory you need to be able to represent the New York City Subway as a graph.  The subway data is publiclly available on the <a href="http://web.mta.info/developers/download.html">MTA's website</a>.</p>
+
+<h2>Understanding the data</h2>
+
+<p>The data is in the <a href="https://developers.google.com/transit/gtfs/">GTFS</a> format.  GTFS consists of text files.  routes.txt is a good place to start.</p>
+
+<h3>Routes</h3>
+
+<p>routes.txt contains the subway's routes.  It looks like <a href="https://developers.google.com/transit/gtfs/examples/gtfs-feed#routestxt">this</a>.</p>
+
+<p>The route_id column contains the familiar names for the routes like "the A" or "the 2" or "the Q".  The schedule for a route varies depending on the day of the week.  The schedule for the A might be different on weekdays than on Saturdays or Sundays.  That brings us to services.</p>
+
+<h3>Services</h3>
+
+<p>Services are represented in calendar.txt.  There are weekday services, Saturday services, and Sunday services.  Several trains run on a route at a time and the stops they take and the times that they stop vary with the service.  That brings us to trips.txt.</p>
+
+<h3>Trips</h3>
+
+<p>Each record in trips.txt maps to a real train that runs on a route on a given day.  Each train has a trip_id and is tied back to a service with a service_id and a route with a route_id.  It also tells you which direction the train runs in (e.g. uptown or downtown).  To find out where a train stops and when you need to look at stop_times.txt.</p>
+
+<h3>Stop Times</h3>
+
+<p>stop_times.txt tells you which stations each train stops at and what time each train stops there.  You can look up the train with the trip_id.  The stop_id tells you which station the train stops at.  The record tells you what time the train arrives and what time the train leaves.  The records belonging to a trip_id each have a stop_sequence.  This tells you the order in which the train visits the stops.  To get more information on the actual stops you can look at stops.txt.</p>
+
+<h3>Stops</h3>
+
+<p>You look up a stop using the stop_id.  Each stop has a name and a latitude and longitude.  Stops are grouped in threes.  There is the parent stop, 127, Times Sq - 42 St, for instance.  And there are two child stops: 127N and 127S.  These stops are part of the same station but one is a stop for uptown trains, and the other is a stop for downtown trains.</p>
+
+<h3>Transfers</h3>
+
+<p>Finally, there is transfers.txt which tells you where you can transfer between stops.  By transfering to a different stop you can transfer to a different route.  Each transfer has a from_stop_id and a to_stop_id.  The min_transfer_time is related to how long it takes to get from one stop to another.  See the details on transfer_type.</p>
+
+<h2>Turning the data into a graph</h2>
+
+<p>Alright, now that we understand the GTFS data we can work on turning it into a graph.  A graph is represented as a collection of nodes (stops in our case) and edges (trains).  We want a collection of stops and we want to be able to look up trains going out of each stop by stop_id.  We will have two data structures: a map of stop_ids to stops and a map of stop_ids to edges.</p>
+
+<p>I will be using Python and a GTFS module for Python called <a href="https://github.com/google/transitfeed">transitfeed</a>.</p>
+
+<h3>Building the nodes</h3>
+
+<p>The stops.txt file maps almost exactly to the data structure we want.  We can load the GTFS data with the transitfeed module and create a map of stop ids to stops with code like this.</p>
+
+<script src="https://gist.github.com/RyanRiddle/6466ecddf802c97ef5dd873fa2ba01fb.js"></script>
+
+<p>This code filters out all the child stops.  This makes things easier because we do not necessarily want to visit the north and south stop of every station.  I think its sufficient to visit each station going in either direction.</p>
+
+<p>In the full source I remove some of the nodes.  Some of the nodes are removed because they do not have any edges.  Maybe these stops are under construction.  The other nodes are removed because they are on Staten Island and I did not want to account for the Staten Island Ferry.
+
+<h3>Building the edges</h3>
+
+<p>We want to know which stops we can reach from a given stop.  We can get this data by combining the stop times data and the transfers data.  Two stop times with the same trip_id and consecutive stop_sequences can be transformed into an edge.  Similarly a transfer represents an edge from one stop to another.  We can write code like this to get the edges.</p>
+
+<script src="https://gist.github.com/RyanRiddle/92dbeae14d238a61cfb71b9d6bc9dae0.js"></script>
+
+<p>Code notes: First we get all the trips that are in service on weekdays.  I chose weekdays only to limit the data set and I figure the most edges will exist on weekdays.  Then we get all the edges from a trip by combining consecutive stop times into a single edge.  Then we get all the edges from transfers.</p>
+
+<p>There's an important difference between transfer edges and train edges.  You take a transfer by walking from one station to another.  That means as soon as you get off the train at a stop you can immediately start walking to the next stop.  Whereas when you take a train edge, you have to wait for the train you are taking to arrive.</p>
+
+<p>To account for this difference every Edge object has a depart_at and arrive_at time.  This time is an integer that represents seconds after midnight (this makes comparing times easy).  Edges created from transfers have a special value in depart_at.  We use ANYTIME which is bound to 999999.</p>
+
+<p>When we visit a stop we might like to know which stop we can get to most quickly.  To do this we will look up all the edges that have the current stop as the origin.  Then we will take all of those edges that depart after the current time (including the transfer edges).  Then we will find the edge from that set that has the smallest arrive_at time.</p>
+
+<h2>Differences from the travelling salesman problem</h2>
+
+<p>You can think of this problem as a graph traversal problem where you want to minimize the total cost to visit each node in the graph.  It is something like the travelling salesman problem with a few differences.</p>
+
+<p>First in the travelling salesman problem you start at a node, visit every other node, and return to the node from which you started.  Returning to the start node is not a requirement for this problem.</p>
+
+<p>Second, the travelling salesman problem usually involves a complete graph (a graph in which every node is connected to every other node).  The NYC subway is not like that.  You can't necessarily take a single train from one station to any other.</p>
+
+<p>Third, some stations are at the "end of the line".  If you go to one of these stations, the only station you can go to next is the last one you passed through.  This makes a difference because many heuristics for solving the travelling salesman problem depend on always being able to go to an unvisited node.  In the NYC subway you have to backtrack through stops you have already visited.</p>
+
+<p>Fourth, the weights of the edges change over time.  Depending on when you arrive at a stop, you may have to wait a few minutes or a few seconds for the next train.  Additionally, trains run more often at 9:00 a.m. than they do at midnight.  The wait time at each stop changes the weight of an edge.  The weight of an edge is the sum of the time it take for the next train to leave and the time it takes that train to arrive at the next stop.</p>
+
+<h2>Running Nearest Neighbor on the Graph</h2>
+
+<p>One approach we can take to compute the shortest path through the subway is the <a href="https://en.wikipedia.org/wiki/Nearest_neighbour_algorithm">Nearest Neighbor Algorithm</a>.  The Nearest Neighbor Algorithm is a greedy approach to the travelling salesman problem where at each node you simply take the smallest edge to the next unvisited node.  The Nearest Neighbor Algorithm does not necessarily lead to the minimum path through the graph.  But, because it is easy enough to understand, it is a good first algorithm to use for this problem.</p>
+
+<p>Remember there are some stops where we will not be able to reach an unvisited stop.  In this case we will find the shortest path to an unvisited stop using <a href="https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm">Dijkstra's Algorithm</a>.  Let's look at an implementation of Dijkstra's algorithm and then see how we can use it to implement the modified Nearest Neighbor algorithm.</p>
+
+<h3>Running Dijksta's Algorithm</h3>
+
+<script src="https://gist.github.com/RyanRiddle/29c615bef314616bc893c984948ed866.js"></script>
+
+<p>This is a little different from the typical dijkstra code.  First we consider only edges that represent trains that leave after we arrive at a stop using <code>get_edges_after_time()</code>.  Second we use the time we arrive at a destination as an edge's weight.  Instead of computing the shortest path to every node from a given origin, we compute the earliest we can arrive at every node if we leave the given origin at the given time.</p>
+
+<h3>Nearest Neighbor</h3>
+
+<p>Nearest Neighbor picks a start node and a start time and adds that node to the path.  Then it adds nodes to the path until it has visited all the nodes.  The next node is selected by choosing edges that leave from the current stop after the arrival time.  Then those edges are sorted by the time you arrive at the destination node.  The smallest edge is chosen and the destination becomes the current node.  If there are no unvisited nodes, we call <code>path_to_nearest_unvisited_stop()</code> which uses Dijkstra's algorithm.</p>
+
+<p><code>path_to_nearest_unvisited_stop()</code> runs Dijkstra's algorithm on the graph from the current node at the current time.  Then it gets all the unvisited stops and finds the one we can get to the earliest.  It returns the path from the source to that node.  Sometimes you can't find a path if the current time is after midnight.  In this case you subtract 24 hours from the current time and run the procedure again.  This should work because we are only considering weekday trains.  So if you start on a Monday you can assume the schedule is the same on Tuesday.</p>
+
+<script src="https://gist.github.com/RyanRiddle/a34d0cbf14d5cf6a97cc4ef7844d7554.js"></script>
+
+<h2>Results</h2>
+
+<p>Using the nearest neighbor algorithm I found that you could visit every stop in the subway in 27 hours and 23 minutes.  That's around 6 hours more than the current record.  The total time varies quite a bit depending on what time you start and what station you start from.  You can do it in 27 hours and 23 minutes if you start at 9:00 a.m. at 14th - Union Sq.  You can see the full path at the <a href="#map">top of the page</a>.</p>
+
+<p>It takes something like one minute to run <code>nearest_neighbor()</code> on the graph.  I did not run <code>nearest_neighbor()</code> on every possible start because it would have taken ~9 hours<sup><a href="#footnote-1">1</a></sup>.  It's possible that you could do significantly better than 27 hours and 23 minutes by starting from a different station.</p>
+
+<p>A different algorithm should be able to find a time at least as good as the current record.  I would like to try <a href="http://heuristicswiki.wikispaces.com/Insertion+%28Heuristic%29">Nearest Insertion</a> or a <a href="https://en.wikipedia.org/wiki/Branch_and_bound">branch and bound</a> algorithm.  Here is the <a href="https://github.com/RyanRiddle/mta-tsp">full source</a>.</p>
+
+<h2>Footnotes</h2>
+
+<p id="footnote-1"><a href="http://journal.xianny.com/2017/03/08/graph-traversal,-first-go-project.html">Xianny's code</a> to generate the graph in Go is much faster.  If performance is a limiting factor to solving this problem maybe switching to another language would help.</p>
+
+
