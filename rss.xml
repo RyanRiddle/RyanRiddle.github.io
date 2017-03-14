@@ -3,18 +3,28 @@
 <channel>
  <title>Ryan's Blog</title>
  <link>https://ryanriddle.github.io/rss.xml</link>
+ <lastBuildDate>Tue, 14 Mar 2017 11:40:00 -0500</lastBuildDate>
+ <pubDate>Tue, 28 Feb 2017 22:00:00 -0500</pubDate>
 
+ <item>
+   <title>The Subway</title>
+   <link>https://ryanriddle.github.io/subway.html</link>
+   <pubDate>Tue, 14 Mar 2017 11:40:00 -0500</pubDate>
+ </item>
  <item>
    <title>Implementing a B-Tree</title>
    <link>https://ryanriddle.github.io/btree.html</link>
+   <pubDate>Tue, 28 Feb 2017 22:00:00 -0500</pubDate>
  </item>
  <item>
    <title>Ruby DB</title>
    <link>https://ryanriddle.github.io/ruby-db.html</link>
+   <pubDate>Tue, 21 Feb 2017 13:00:00 -0500</pubDate>
  </item>
  <item>
    <title>High Five!</title>
    <link>https://ryanriddle.github.io/high-five.html</link>
+   <pubDate>Tue, 14 Feb 2017 13:40:00 -0500</pubDate>
  </item>
 
 </channel>
