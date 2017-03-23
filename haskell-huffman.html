@@ -1,0 +1,41 @@
+<title>Huffman Encoding in Haskell</title>
+
+<h1>Huffman Encoding in Haskell</h1>
+
+<p>Today I decided to write a Huffman Encoding program to help me learn Haskell.  Structure and Interpretation of Computer Programs has a <a href="https://mitpress.mit.edu/sicp/full-text/book/book-Z-H-16.html#%_sec_2.3.4">good section that explains Huffman Encoding Trees</a>.</p>
+
+<p>My Huffman Encoding program has three main parts.</p>
+
+<ol>
+  <li>A function <code>makeTree</code> that turns a list of nodes into a Huffman Encoding Tree.</li>
+  <li>A function <code>decode</code> that takes a Huffman Encoding Tree and a bit string and returns the unencoded text.</li>
+  <li>A function <code>encode</code> that takes a Huffman Encoding Tree and a piece of text and returns a bit string.</li>
+</ol>
+
+<p>Here is the program.</p>
+
+<script src="https://gist.github.com/RyanRiddle/7a2435deec8654e9ac937767818b159d.js"></script>
+
+<p>Let's look at each part.</p>
+
+<p>A Huffman Encoding Tree is represented by the Node data type.  A Node is either a Leaf that has a Symbol and a Weight or an Interior Node that has a left Node, a right Node, a list of Symbols in the tree, and a cummulative Weight.</p>
+
+<p>You can construct a Huffman Encoding Tree by passing a list of Leaf Nodes that is sorted by the Weight of each Leaf to <code>makeTree</code> like this.</p>
+
+<code>let tree = makeTree [(Leaf 'A' 1), (Leaf 'B' 1), (Leaf 'C' 2)]</code>
+
+<p><code>makeTree</code> works by taking the two Nodes with with smallest weights from the list and combining them into a new Node then inserting the new Node into the list in the correct position.</p>
+
+<p><code>encode</code> works by taking a symbol from the text string and searching for that symbol in the tree.  As <code>encode</code> moves down the tree toward the leaves, it appends a bit to the resulting bit string.  When <code>encode</code> reaches a Leaf, <code>encode</code> returns to the root of the Huffman Encoding Tree and takes the next symbol from the text string.  When <code>encode</code> is out of symbols it returns.</p>
+
+<p><code>decode</code> works in a similar way.  <code>decode</code> takes a bit from the bit string and moves to the left subtree if the bit is 0 and moves to the right subtree otherwise.  When <code>decode</code> reaches a Leaf, it pushes the leaf's symbol into the result string, returns to the root of the Huffman Encoding Tree and takes the next bit from the bit string.</p>
+
+<h2>Pushing Logic onto your type system</h2>
+
+<p>Pattern-matching helps keep the definition of <code>makeTree</code> small.  The first argument the definition matches is a list containing only one element.  This is the base case.  The second argument the definition matches is a list containing at least two elements <code>first</code> and <code>second</code> and the <code>rest</code> of the list.  The <code>x:xs</code> syntax is called a cons and represents a list composed of an element <code>x</code> and the rest of the elements in the list <code>xs</code>.  Pattern-matching <code>first</code>, <code>second</code>, and <code>rest</code> saves us from having to write code to extract <code>first</code>, <code>second</code>, and <code>rest</code> from the list.</p>
+
+<p>There is no <code>if</code> in this program.  It branches using pattern-matching instead.  For example, instead of writing <code>if isLeaf tree</code>, Haskell can tell when <code>encode</code> is called on a Leaf if we write this <code>encode codeTree (Leaf s w) (sym:symbols)</code>.  And instead of having to write code to extract the left and right subtrees from a Node, Haskell will bind the left and right subtrees to l and r respectively if we write this <code>encode codeTree (Interior l r) (sym:symbols)</code>.</p>
+
+<p>Pattern-matching helps keep this code dense.  Even though I am not used to reading dense code, I like it because almost everything you need to know about what the program is doing is represented locally as opposed to being scattered around the program in different functions.</p>
+
+  
