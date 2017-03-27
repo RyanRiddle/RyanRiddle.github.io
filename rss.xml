@@ -3,9 +3,14 @@
 <channel>
  <title>Ryan's Blog</title>
  <link>https://ryanriddle.github.io/rss.xml</link>
- <lastBuildDate>Tue, 23 Mar 2017 11:15:00 -0500</lastBuildDate>
+ <lastBuildDate>Tue, 27 Mar 2017 14:57:00 -0500</lastBuildDate>
  <pubDate>Tue, 28 Feb 2017 22:00:00 -0500</pubDate>
 
+ <item>
+   <title>Six Weeks at the Recurse Center</title>
+   <link>https://ryanriddle.github.io/six-weeks.html</link>
+   <pubDate>Tue, 27 Mar 2017 14:57:00 -0500</pubDate>
+ </item>
  <item>
    <title>Huffman Encoding in Haskell</title>
    <link>https://ryanriddle.github.io/haskell-huffman.html</link>
