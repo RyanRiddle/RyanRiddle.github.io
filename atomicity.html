@@ -1,0 +1,96 @@
+<title>Transactions and Atomicity</title>
+
+<h1>Transactions and Atomicity</h1>
+
+<h2>What is a transaction?</h2>
+
+<p>A transaction treats a set of changes to a database as a unit.  A transaction has four properties.  The changes in the unit must all succeed.  Otherwise, they all fail.  The changes must leave the database in a valid state.  The changes in the transaction must not interfere with or receive interference from other changes.  And the changes must persist if the database is restarted.  These properties are shortened to ACID: atomicity, consistency, isolation, and durability.</p>
+
+<h2>Atomicity</h2>
+
+<p>This post deals with the first property: Atomicity.  Atomicity guarantees that the changes in the transaction all succeed or all fail.  The classic example for transactions is a bank database with a table that represents how much money is in each account.  Imagine Alice writes a check for $100 to Bob.  The bank wants to update its database so Alice loses $100 and Bob gains $100.  In other words the bank wants to run the following SQL queries.</p>
+
+<pre><code>UPDATE bank_database.account_value
+SET amount = amount - 100
+WHERE name = 'Alice';
+
+UPDATE bank_database.account_value
+SET amount = amount + 100
+WHERE name = 'Bob';
+</code></pre>
+
+<p>Imagine the database server crashes after running the first query but before running the second.  Alice is out $100 and Bob is still waiting on the check to clear.</p>
+
+<p>Database management systems solve this problem with transactions.  You can turn these two statements into a transaction by writing something like this.</p>
+
+<pre><code>TRANSACTION START;
+
+UPDATE bank_database.account_value
+SET amount = amount - 100
+WHERE name = 'Alice';
+
+UPDATE bank_database.account_value
+SET amount = amount + 100
+WHERE name = 'Bob';
+
+COMMIT;
+</code></pre>
+
+<p>Now if the database server crashes between statements the database either finishes applying the transaction when it comes back online or it does not apply the transaction at all.  If there is no failure, the transaction succeeds.</p>
+
+<p>How does the database make sure the transaction succeeds or fails as a whole?  One approach is to use a rollback journal.  Another approach is to use a write ahead log.</p>
+
+<h2>Rollback Journal</h2>
+
+<p>A rollback journal captures the state of the database before the transaction is executed.  If something goes wrong during the transaction, the database is restored using the rollback journal.  SQLite uses a rollback journal by default.</p>
+
+<p>I wrote a simple implementation of a rollback journal.  It copies the file that holds our data, say data.db, to a new file called data.db.journal.  When the transaction is complete, data.db.journal is deleted.  When the database is started it looks for files ending in .journal.  If it finds a .journal file, it assumes the transaction failed and replaces data.db with data.db.journal.</p>
+
+<p>There are a couple of downsides to the rollback journal.  First, it can be expensive to copy the data file if we have a lot of data.  Second, the rollback journal makes it easy to revert to the previous state but difficult to resume the transaction.  There is another mechanism called a write ahead log.</p>
+
+<h2>Write Ahead Log (WAL)</h2>
+
+<p>Another approach to implementing transactions is two write all the changes that will be made to a file called a Write Ahead Log before actually making the changes.  If there is a failure, the database can compare its state to the write ahead log and pick up where it left off.</p>
+
+<p>The advantages of a write ahead log are that much of the time you end up writing less data than you would with a rollback journal and it is easy to continue the transaction after recovering from a failure.  One disadvantage is it is more difficult to implement.</p>
+
+<h2>Implemenation details</h2>
+
+<p>I defined a Transaction class here</p>
+
+<script src="https://gist.github.com/RyanRiddle/fc374f3a3e06f3547706be7f5b736ec4.js"></script>
+
+<p>Client code can #add commands to the Transaction, #commit the Transaction, and #rollback the Transaction.  The Transaction class has a @rollback_mechanism which refers to a RollbackJournal object (or potentially a WriteAheadLog object).  In Transaction#commit the Transaction object passes the list of commands to RollbackJournal#prep.  The RollbackJournal object copies the tables that will be affected by the commands.  Then the Transaction object executes the commands.  Then the RollbackJournal object deletes all the .journal files it created.</p>
+
+<p>In the event of a failure the client code would call Transaction#rollback which would call RollbackJournal#rollback which would overwrite the table files with the .journal files.</p>
+
+<p>This is the RollbackJournal class</p>
+
+<script src="https://gist.github.com/RyanRiddle/82143e06d1bd16a7df5cf0687d3c4101.js"></script>
+
+<p>And here are its uglier implementation details</p>
+
+<script src="https://gist.github.com/RyanRiddle/c2951ab110e7007d19c00e0cbbefb1ce.js"></script>
+
+<p>We can start and execute a transaction like this.</p>
+
+<script src="https://gist.github.com/RyanRiddle/5cdd04c77814a5fc597f3bb4e020ee0b.js"></script>
+
+<p>And we can recover from a transaction like this</p>
+
+<script src="https://gist.github.com/RyanRiddle/dd58393152f8147c88293bd5cc859655.js"></script>
+
+<h2>Testing transactions</h2>
+
+<p>That's cool.  But how do we know it works?</p>
+
+<p>What's a failure?  A failure might occur when the power goes out, a disk goes bad, or the system crashes.  So, one way to test would be to reboot during a long-running transaction.  We can do that by running a transaction, rebooting before it completes, restarting the database, and then running a select query.  If you do this, the database is indeed in the state it was before we began the transaction.  But this is not a very good way to run a test.</p>
+
+<p>We can simulate a power failure by running a transaction in a separate thread and killing the thread in the middle of the transaction.  Consider this test</p>
+
+<script src="https://gist.github.com/RyanRiddle/cf6b562df171b3b048118f6b0c0bf169.js"></script>
+
+<p>The test creates a transaction to add 100,000 rows to the restaurant table.  Then Transaction#commit is called from a separate thread.   Once the .journal file has been created, the commit thread is killed.  Then we restart the database and check the contents of the restaurant table.</p>
+
+<p>This post is the third in a series of posts about my attempt to write a database in an effort to better understand how databases work.  Ultimately, I would like to write a longer tutorial that explains how to write the different components that comprise a database.  You can browse the source code of my project here <a href="https://github.com/RyanRiddle/rudb">here</a>.  And you can find my other two posts <a href="https://ryanriddle.github.io/ruby-db.html">here</a> and <a href="https://ryanriddle.github.io/btree.html">here</a>.</p>
+
