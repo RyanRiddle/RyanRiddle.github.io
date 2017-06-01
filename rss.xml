@@ -3,9 +3,14 @@
 <channel>
  <title>Ryan's Blog</title>
  <link>https://ryanriddle.github.io/rss.xml</link>
- <lastBuildDate>Tue, 04 Apr 2017 14:57:00 -0500</lastBuildDate>
+ <lastBuildDate>Tue, 01 Jun 2017 17:02:00 -0500</lastBuildDate>
  <pubDate>Tue, 28 Feb 2017 22:00:00 -0500</pubDate>
 
+ <item>
+   <title>Twelve Weeks at the Recurse Center</title>
+   <link>https://ryanriddle.github.io/twelve-weeks.html</link>
+   <pubDate>Thu, 01 Jun 2017 17:02:00 -0500</pubDate>
+ </item>
  <item>
    <title>Database Transactions and Atomicity</title>
    <link>https://ryanriddle.github.io/atomicity.html</link>
