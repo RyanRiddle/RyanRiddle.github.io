@@ -3,9 +3,14 @@
 <channel>
  <title>Ryan's Blog</title>
  <link>https://ryanriddle.github.io/rss.xml</link>
- <lastBuildDate>Tue, 01 Jun 2017 17:02:00 -0500</lastBuildDate>
+ <lastBuildDate>Fri, 16 Jun 2017 22:08:00 -0500</lastBuildDate>
  <pubDate>Tue, 28 Feb 2017 22:00:00 -0500</pubDate>
 
+ <item>
+   <title>How to Write a Database - Part 1</title>
+   <link>https://ryanriddle.github.io/how-to-write-a-database.html</link>
+   <pubDate>Fri, 16 Jun 2017 22:08:00 -0500</pubDate>
+ </item>
  <item>
    <title>Twelve Weeks at the Recurse Center</title>
    <link>https://ryanriddle.github.io/twelve-weeks.html</link>
